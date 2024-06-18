@@ -1,7 +1,7 @@
 using Azure.Identity;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,7 +11,7 @@ var tempConfig = new ConfigurationBuilder()
     .AddEnvironmentVariables()
     .Build();
 
-var keyVaultEndpoint = tempConfig["https://kvyoutubedemowithdotnet.vault.azure.net/"];
+var keyVaultEndpoint = tempConfig["AzureKeyVaultEndpoint"];
 
 if (!string.IsNullOrEmpty(keyVaultEndpoint))
 {
@@ -25,11 +25,25 @@ if (!string.IsNullOrEmpty(keyVaultEndpoint))
 
 var app = builder.Build();
 
-app.MapGet("/", (IConfiguration config) =>
+// Serve static files from wwwroot folder
+app.UseStaticFiles();
+
+// Enable default files mapping (like index.html)
+app.UseDefaultFiles();
+
+// Use routing
+app.UseRouting();
+
+// Configure the endpoints
+app.UseEndpoints(endpoints =>
 {
-    // Access a secret from Key Vault
-    var secretValue = config["KeyVaultDemo-ConnectionStrings--DefaultConnection"];
-    return Results.Ok($"Secret Value: {secretValue}");
+    endpoints.MapGet("/secret", (IConfiguration config) =>
+    {
+        var secretValue = config["MySecretKey"];
+        return Results.Ok($"Secret Value: {secretValue}");
+    });
+
+    endpoints.MapFallbackToFile("index.html"); // Fallback to serve index.html for any other route
 });
 
 app.Run();
